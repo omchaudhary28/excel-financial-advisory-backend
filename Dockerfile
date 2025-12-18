@@ -1,9 +1,13 @@
-FROM php:8.2-apache
+﻿FROM php:8.2-apache
 
-RUN docker-php-ext-install mysqli
+# Install PostgreSQL PDO driver
+RUN apt-get update && apt-get install -y libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql pgsql
 
-COPY . /var/www/html/
+# Enable Apache rewrite
+RUN a2enmod rewrite
+
+WORKDIR /var/www/html
+COPY . /var/www/html
 
 RUN chown -R www-data:www-data /var/www/html
-
-EXPOSE 80
