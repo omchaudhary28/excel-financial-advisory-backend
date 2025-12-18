@@ -1,9 +1,6 @@
 <?php
-require_once 'cors.php';
-
-
-require_once 'db_connect.php';
-require_once 'middleware_auth.php'; // optional: only if this route requires login
+require_once __DIR__ . '/cors.php';
+require_once __DIR__ . '/db_connect.php';
 
 header("Content-Type: application/json; charset=UTF-8");
 

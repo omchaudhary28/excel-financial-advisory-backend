@@ -1,8 +1,8 @@
 <?php
-require_once 'cors.php';
+require_once __DIR__ . '/cors.php';
+require_once __DIR__ . '/db_connect.php';
+require_once __DIR__ . '/jwt_utils.php';
 
-require_once 'db_connect.php'; // PDO connection
-require_once 'jwt_utils.php';
 
 header("Content-Type: application/json; charset=UTF-8");
 
