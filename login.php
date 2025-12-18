@@ -5,24 +5,24 @@ require_once 'jwt_utils.php';
 
 header("Content-Type: application/json; charset=UTF-8");
 
-// Read URL-encoded POST data
+// Read POST data (URL-encoded or JSON safe)
 $email = $_POST['email'] ?? '';
 $password = $_POST['password'] ?? '';
 
-if (!$email || !$password) {
+if (empty($email) || empty($password)) {
     http_response_code(400);
     echo json_encode([
         "success" => false,
-        "message" => "Missing credentials"
+        "message" => "Email and password are required"
     ]);
     exit;
 }
 
 try {
-    // 🔐 Fetch user (PostgreSQL PDO)
-    $stmt = $pdo->prepare(
-        "SELECT id, name, email, password, role
-         FROM users
+    // 🔐 Fetch user (PostgreSQL + PDO)
+    $stmt = $conn->prepare(
+        "SELECT id, name, email, password, role 
+         FROM users 
          WHERE email = :email
          LIMIT 1"
     );
@@ -37,7 +37,7 @@ try {
         http_response_code(401);
         echo json_encode([
             "success" => false,
-            "message" => "Invalid credentials"
+            "message" => "Invalid email or password"
         ]);
         exit;
     }
@@ -47,7 +47,7 @@ try {
         http_response_code(401);
         echo json_encode([
             "success" => false,
-            "message" => "Invalid credentials"
+            "message" => "Invalid email or password"
         ]);
         exit;
     }
@@ -59,6 +59,7 @@ try {
         "role"  => $user['role']
     ]);
 
+    // ✅ Success response
     echo json_encode([
         "success" => true,
         "token"   => $token,
@@ -74,6 +75,6 @@ try {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "message" => "Server error"
+        "message" => "Login failed"
     ]);
 }
