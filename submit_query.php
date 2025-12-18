@@ -1,55 +1,36 @@
-<?php
-require_once "cors.php";
+﻿<?php
+require_once 'db.php';
 
-header("Content-Type: application/json; charset=UTF-8");
-
-$data = json_decode(file_get_contents("php://input"), true);
-
-if (!$data) {
-    http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Invalid JSON"]);
+if (\['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
     exit;
 }
 
-$name = trim($data["name"] ?? "");
-$email = trim($data["email"] ?? "");
-$subject = trim($data["subject"] ?? "");
-$message = trim($data["message"] ?? "");
+\ = json_decode(file_get_contents('php://input'), true);
 
-if (!$name || !$email || !$message) {
+if (!\) {
     http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Missing fields"]);
+    echo json_encode(['success' => false, 'error' => 'Invalid JSON']);
     exit;
 }
 
-/* PostgreSQL PDO connection */
-$dsn = sprintf(
-    "pgsql:host=%s;port=%s;dbname=%s;sslmode=require",
-    getenv("DB_HOST"),
-    getenv("DB_PORT"),
-    getenv("DB_NAME")
+foreach (['name','email','message'] as \) {
+    if (empty(\[\])) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'error' => "\ is required"]);
+        exit;
+    }
+}
+
+\ = \->prepare(
+    "INSERT INTO queries (name, email, subject, message) VALUES (:name, :email, :subject, :message)"
 );
 
-try {
-    $pdo = new PDO($dsn, getenv("DB_USER"), getenv("DB_PASSWORD"), [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+\->execute([
+    ':name' => \['name'],
+    ':email' => \['email'],
+    ':subject' => \['subject'] ?? null,
+    ':message' => \['message']
+]);
 
-    $stmt = $pdo->prepare(
-        "INSERT INTO queries (name, email, subject, message)
-         VALUES (:name, :email, :subject, :message)"
-    );
-
-    $stmt->execute([
-        ":name" => $name,
-        ":email" => $email,
-        ":subject" => $subject,
-        ":message" => $message
-    ]);
-
-    echo json_encode(["success" => true, "message" => "Query submitted"]);
-
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "error" => $e->getMessage()]);
-}
+echo json_encode(['success' => true, 'message' => 'Query submitted']);
