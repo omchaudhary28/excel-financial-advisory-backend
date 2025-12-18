@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// 🔐 Extract Bearer token
+// ðŸ” Extract Bearer token
 $token = JWT::getBearerToken();
 
 if (!$token) {
@@ -23,7 +23,7 @@ if (!$token) {
     exit;
 }
 
-// 🔍 Verify token
+// ðŸ” Verify token
 $payload = JWT::verify($token);
 
 if (!$payload) {
@@ -35,7 +35,7 @@ if (!$payload) {
     exit;
 }
 
-// ✅ Authenticated user is now available globally
+// âœ… Authenticated user is now available globally
 $GLOBALS['authenticated_user'] = [
     'id'    => $payload['id'],
     'email' => $payload['email'],

@@ -1,17 +1,20 @@
-﻿<?php
-require_once 'db.php';
-
-header("Content-Type: application/json; charset=UTF-8");
+<?php
+require_once __DIR__ . "/cors.php";
+require_once __DIR__ . "/db.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-$name    = $data['name'] ?? '';
-$email   = $data['email'] ?? '';
-$subject = $data['subject'] ?? '';
-$message = $data['message'] ?? '';
+if (!$data) {
+    echo json_encode(["success" => false, "message" => "Invalid JSON"]);
+    exit;
+}
+
+$name    = trim($data['name'] ?? '');
+$email   = trim($data['email'] ?? '');
+$subject = trim($data['subject'] ?? '');
+$message = trim($data['message'] ?? '');
 
 if (!$name || !$email || !$message) {
-    http_response_code(400);
     echo json_encode(["success" => false, "message" => "Missing fields"]);
     exit;
 }
@@ -22,13 +25,10 @@ $stmt = $pdo->prepare(
 );
 
 $stmt->execute([
-    'name' => $name,
-    'email' => $email,
-    'subject' => $subject,
-    'message' => $message
+    ":name" => $name,
+    ":email" => $email,
+    ":subject" => $subject,
+    ":message" => $message
 ]);
 
-echo json_encode([
-    "success" => true,
-    "message" => "Query submitted"
-]);
+echo json_encode(["success" => true, "message" => "Query submitted"]);

@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'db_connect.php';
 
-// 🔐 Authorization check using JWT payload
+// ðŸ” Authorization check using JWT payload
 $authenticated_user = $GLOBALS['authenticated_user'];
 
 if (
