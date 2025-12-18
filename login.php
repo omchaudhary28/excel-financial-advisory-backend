@@ -1,81 +1,72 @@
 <?php
-require_once __DIR__ . '/cors.php';
-require_once __DIR__ . '/db_connect.php';
-require_once __DIR__ . '/jwt_utils.php';
+require_once 'db.php';
+require_once 'jwt_utils.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
-header("Content-Type: application/json; charset=UTF-8");
+$data = json_decode(file_get_contents('php://input'), true);
 
-// Read POST data (URL-encoded or JSON safe)
-$email = $_POST['email'] ?? '';
-$password = $_POST['password'] ?? '';
-
-if (empty($email) || empty($password)) {
+if (!$data || empty($data['email']) || empty($data['password'])) {
     http_response_code(400);
     echo json_encode([
-        "success" => false,
-        "message" => "Email and password are required"
+        'success' => false,
+        'error' => 'Email and password required'
     ]);
     exit;
 }
 
-try {
-    // 🔐 Fetch user (PostgreSQL + PDO)
-    $stmt = $conn->prepare(
-        "SELECT id, name, email, password, role 
-         FROM users 
-         WHERE email = :email
-         LIMIT 1"
-    );
+$email = trim($data['email']);
+$password = $data['password'];
 
-    $stmt->execute([
-        ':email' => $email
-    ]);
+$stmt = $pdo->prepare(
+    "SELECT id, name, email, password, role
+     FROM users
+     WHERE email = :email
+     LIMIT 1"
+);
 
-    $user = $stmt->fetch();
+$stmt->execute([':email' => $email]);
 
-    if (!$user) {
-        http_response_code(401);
-        echo json_encode([
-            "success" => false,
-            "message" => "Invalid email or password"
-        ]);
-        exit;
-    }
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // 🔑 Verify password
-    if (!password_verify($password, $user['password'])) {
-        http_response_code(401);
-        echo json_encode([
-            "success" => false,
-            "message" => "Invalid email or password"
-        ]);
-        exit;
-    }
-
-    // 🎟️ Generate JWT
-    $token = JWT::generate([
-        "id"    => $user['id'],
-        "email" => $user['email'],
-        "role"  => $user['role']
-    ]);
-
-    // ✅ Success response
+/**
+ * ✅ IMPORTANT FIX:
+ * Explicitly check that $user is an array
+ */
+if (!is_array($user)) {
+    http_response_code(401);
     echo json_encode([
-        "success" => true,
-        "token"   => $token,
-        "user"    => [
-            "id"    => $user['id'],
-            "name"  => $user['name'],
-            "email" => $user['email'],
-            "role"  => $user['role']
-        ]
+        'success' => false,
+        'error' => 'Invalid credentials'
     ]);
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        "success" => false,
-        "message" => "Login failed"
-    ]);
+    exit;
 }
+
+if (!password_verify($password, $user['password'])) {
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Invalid credentials'
+    ]);
+    exit;
+}
+
+$token = JWT::generate([
+    'id' => $user['id'],
+    'email' => $user['email'],
+    'role' => $user['role']
+]);
+
+echo json_encode([
+    'success' => true,
+    'token' => $token,
+    'user' => [
+        'id' => $user['id'],
+        'name' => $user['name'],
+        'email' => $user['email'],
+        'role' => $user['role']
+    ]
+]);
