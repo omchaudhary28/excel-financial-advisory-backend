@@ -1,3 +1,4 @@
+<?php require_once __DIR__.'/cors.php'; ?>
 <?php
 header("Access-Control-Allow-Origin: https://excel-financial-advisory.vercel.app");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
@@ -26,3 +27,4 @@ try {
     echo json_encode(["success" => false, "message" => "DB connection failed"]);
     exit;
 }
+

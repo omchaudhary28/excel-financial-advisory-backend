@@ -1,3 +1,5 @@
+<?php header('Content-Type: application/json'); ?>
+<?php require_once __DIR__.'/cors.php'; ?>
 <?php
 class JWT {
 
@@ -56,3 +58,4 @@ class JWT {
     }
 }
 ?>
+

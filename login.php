@@ -35,12 +35,9 @@ try {
         exit;
     }
 
-    // ✅ Generate token (NO DB STORAGE)
-    $token = bin2hex(random_bytes(32));
 
     echo json_encode([
         "success" => true,
-        "token" => $token,
         "user" => [
             "id" => $user["id"],
             "name" => $user["name"],

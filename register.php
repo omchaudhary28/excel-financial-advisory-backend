@@ -1,3 +1,5 @@
+<?php header('Content-Type: application/json'); ?>
+<?php require_once __DIR__.'/cors.php'; ?>
 <?php
 require "db.php";
 
@@ -18,3 +20,5 @@ $stmt = $pdo->prepare("INSERT INTO users (name,email,password) VALUES (?,?,?)");
 $stmt->execute([$name, $email, $hash]);
 
 echo json_encode(["success" => true, "message" => "Registered successfully"]);
+
+

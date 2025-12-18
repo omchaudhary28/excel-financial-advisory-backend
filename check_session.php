@@ -1,3 +1,4 @@
+<?php header('Content-Type: application/json'); ?>
 <?php
 require_once 'cors.php';
 
@@ -7,3 +8,4 @@ echo json_encode([
     "error" => "Session-based authentication has been deprecated.",
     "message" => "This endpoint is no longer in use. JWT authentication is now required."
 ]);
+

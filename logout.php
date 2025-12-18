@@ -1,3 +1,4 @@
+<?php header('Content-Type: application/json'); ?>
 <?php
 require_once 'cors.php';
 
@@ -7,3 +8,4 @@ echo json_encode([
     "error" => "Session-based logout has been deprecated.",
     "message" => "JWT authentication does not require server-side logout."
 ]);
+

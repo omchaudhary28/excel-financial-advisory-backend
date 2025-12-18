@@ -1,3 +1,5 @@
+<?php header('Content-Type: application/json'); ?>
+<?php require_once __DIR__.'/cors.php'; ?>
 <?php
 require "db.php";
 
@@ -27,3 +29,5 @@ $stmt->execute([
 ]);
 
 echo json_encode(["success" => true, "message" => "Profile updated"]);
+
+
