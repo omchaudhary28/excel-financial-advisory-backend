@@ -1,72 +1,45 @@
-<?php
+﻿<?php
 require_once 'db.php';
 require_once 'jwt_utils.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+header("Content-Type: application/json; charset=UTF-8");
 
-$data = json_decode(file_get_contents('php://input'), true);
+$data = json_decode(file_get_contents("php://input"), true);
 
-if (!$data || empty($data['email']) || empty($data['password'])) {
+$email = $data['email'] ?? '';
+$password = $data['password'] ?? '';
+
+if (!$email || !$password) {
     http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Email and password required'
-    ]);
+    echo json_encode(["success" => false, "message" => "Missing credentials"]);
     exit;
 }
-
-$email = trim($data['email']);
-$password = $data['password'];
 
 $stmt = $pdo->prepare(
-    "SELECT id, name, email, password, role
-     FROM users
-     WHERE email = :email
-     LIMIT 1"
+    "SELECT id, name, email, password, role FROM users WHERE email = :email"
 );
+$stmt->execute(['email' => $email]);
+$user = $stmt->fetch();
 
-$stmt->execute([':email' => $email]);
-
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-/**
- * ✅ IMPORTANT FIX:
- * Explicitly check that $user is an array
- */
-if (!is_array($user)) {
+if (!$user || !password_verify($password, $user['password'])) {
     http_response_code(401);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Invalid credentials'
-    ]);
-    exit;
-}
-
-if (!password_verify($password, $user['password'])) {
-    http_response_code(401);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Invalid credentials'
-    ]);
+    echo json_encode(["success" => false, "message" => "Invalid credentials"]);
     exit;
 }
 
 $token = JWT::generate([
-    'id' => $user['id'],
-    'email' => $user['email'],
-    'role' => $user['role']
+    "id" => $user['id'],
+    "email" => $user['email'],
+    "role" => $user['role']
 ]);
 
 echo json_encode([
-    'success' => true,
-    'token' => $token,
-    'user' => [
-        'id' => $user['id'],
-        'name' => $user['name'],
-        'email' => $user['email'],
-        'role' => $user['role']
+    "success" => true,
+    "token" => $token,
+    "user" => [
+        "id" => $user['id'],
+        "name" => $user['name'],
+        "email" => $user['email'],
+        "role" => $user['role']
     ]
 ]);

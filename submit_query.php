@@ -1,28 +1,19 @@
 ﻿<?php
 require_once 'db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+header("Content-Type: application/json; charset=UTF-8");
 
-$data = json_decode(file_get_contents('php://input'), true);
+$data = json_decode(file_get_contents("php://input"), true);
 
-if (!$data) {
+$name    = $data['name'] ?? '';
+$email   = $data['email'] ?? '';
+$subject = $data['subject'] ?? '';
+$message = $data['message'] ?? '';
+
+if (!$name || !$email || !$message) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid JSON']);
+    echo json_encode(["success" => false, "message" => "Missing fields"]);
     exit;
-}
-
-foreach (['name', 'email', 'message'] as $field) {
-    if (empty($data[$field])) {
-        http_response_code(422);
-        echo json_encode([
-            'success' => false,
-            'error' => "$field is required"
-        ]);
-        exit;
-    }
 }
 
 $stmt = $pdo->prepare(
@@ -31,13 +22,13 @@ $stmt = $pdo->prepare(
 );
 
 $stmt->execute([
-    ':name' => $data['name'],
-    ':email' => $data['email'],
-    ':subject' => $data['subject'] ?? null,
-    ':message' => $data['message']
+    'name' => $name,
+    'email' => $email,
+    'subject' => $subject,
+    'message' => $message
 ]);
 
 echo json_encode([
-    'success' => true,
-    'message' => 'Query submitted'
+    "success" => true,
+    "message" => "Query submitted"
 ]);
