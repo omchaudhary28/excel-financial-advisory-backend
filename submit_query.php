@@ -1,52 +1,48 @@
 <?php
-require_once __DIR__ . '/cors.php';
-require_once __DIR__ . '/db_connect.php';
+require_once "cors.php";
 
-header("Content-Type: application/json; charset=UTF-8");
+header("Content-Type: application/json");
 
-// Accept JSON body
 $data = json_decode(file_get_contents("php://input"), true);
 
-$name    = trim($data['name'] ?? '');
-$email   = trim($data['email'] ?? '');
-$subject = trim($data['subject'] ?? '');
-$message = trim($data['message'] ?? '');
+if (!$data) {
+    echo json_encode(["success" => false, "message" => "Invalid JSON"]);
+    exit;
+}
 
-// If you allow anonymous queries, keep this optional
-$userId = $GLOBALS['authenticated_user']['user_id'] ?? null;
+$name    = trim($data["name"] ?? "");
+$email   = trim($data["email"] ?? "");
+$subject = trim($data["subject"] ?? "");
+$message = trim($data["message"] ?? "");
 
 if (!$name || !$email || !$message) {
-    http_response_code(400);
-    echo json_encode([
-        "success" => false,
-        "message" => "Name, email and message are required"
-    ]);
+    echo json_encode(["success" => false, "message" => "Missing fields"]);
     exit;
 }
 
 try {
-    $stmt = $conn->prepare(
-        "INSERT INTO queries (user_id, name, email, subject, message)
-         VALUES (:user_id, :name, :email, :subject, :message)"
+    $dsn = "pgsql:host=" . getenv("DB_HOST") .
+           ";port=" . getenv("DB_PORT") .
+           ";dbname=" . getenv("DB_NAME");
+
+    $pdo = new PDO($dsn, getenv("DB_USER"), getenv("DB_PASSWORD"), [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    ]);
+
+    $stmt = $pdo->prepare(
+        "INSERT INTO queries (name, email, subject, message)
+         VALUES (:name, :email, :subject, :message)"
     );
 
     $stmt->execute([
-        ':user_id' => $userId,
-        ':name'    => $name,
-        ':email'   => $email,
-        ':subject' => $subject ?: null,
-        ':message' => $message
+        ":name" => $name,
+        ":email" => $email,
+        ":subject" => $subject,
+        ":message" => $message
     ]);
 
-    echo json_encode([
-        "success" => true,
-        "message" => "Query submitted successfully"
-    ]);
+    echo json_encode(["success" => true, "message" => "Query submitted successfully"]);
 
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        "success" => false,
-        "message" => "Failed to submit query"
-    ]);
+    echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
