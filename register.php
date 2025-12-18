@@ -1,86 +1,48 @@
 <?php
-require_once __DIR__ . '/cors.php';
-require_once __DIR__ . '/db_connect.php';
-require_once __DIR__ . '/jwt_utils.php';
+require_once __DIR__ . "/db.php";
 
-
-header("Content-Type: application/json; charset=UTF-8");
-
-// Read JSON input
 $data = json_decode(file_get_contents("php://input"), true);
 
-$name     = trim($data['name'] ?? '');
-$email    = trim($data['email'] ?? '');
-$password = $data['password'] ?? '';
-$confirm  = $data['confirm_password'] ?? '';
-$phone    = trim($data['phone'] ?? '');
-
-if (!$name || !$email || !$password || !$confirm) {
-    http_response_code(400);
+if (
+    !$data ||
+    empty($data["name"]) ||
+    empty($data["email"]) ||
+    empty($data["password"])
+) {
     echo json_encode([
         "success" => false,
-        "message" => "All required fields must be filled"
+        "message" => "All fields required"
     ]);
     exit;
 }
 
-if ($password !== $confirm) {
-    http_response_code(400);
+$name = trim($data["name"]);
+$email = trim($data["email"]);
+$password = password_hash($data["password"], PASSWORD_DEFAULT);
+
+$check = $pdo->prepare("SELECT id FROM users WHERE email = :email");
+$check->execute(["email" => $email]);
+
+if ($check->fetch()) {
     echo json_encode([
         "success" => false,
-        "message" => "Passwords do not match"
+        "message" => "Email already exists"
     ]);
     exit;
 }
 
-// Check if email already exists
 $stmt = $pdo->prepare(
-    "SELECT id FROM users WHERE email = :email"
-);
-$stmt->execute(['email' => $email]);
-
-if ($stmt->fetch()) {
-    http_response_code(409);
-    echo json_encode([
-        "success" => false,
-        "message" => "Email already registered"
-    ]);
-    exit;
-}
-
-// Hash password
-$hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-// Insert user
-$stmt = $pdo->prepare(
-    "INSERT INTO users (name, email, password, phone, role)
-     VALUES (:name, :email, :password, :phone, 'user')"
+    "INSERT INTO users (name, email, password, role)
+     VALUES (:name, :email, :password, 'user')"
 );
 
 $stmt->execute([
-    'name'     => $name,
-    'email'    => $email,
-    'password' => $hashedPassword,
-    'phone'    => $phone ?: null
-]);
-
-$userId = $pdo->lastInsertId();
-
-// Generate JWT
-$token = JWT::generate([
-    "id"    => $userId,
+    "name" => $name,
     "email" => $email,
-    "role"  => "user"
+    "password" => $password
 ]);
 
 echo json_encode([
     "success" => true,
-    "message" => "Registration successful",
-    "token"   => $token,
-    "user" => [
-        "id"    => $userId,
-        "name"  => $name,
-        "email" => $email,
-        "role"  => "user"
-    ]
+    "message" => "Registration successful"
 ]);

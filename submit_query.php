@@ -1,23 +1,25 @@
 <?php
-require_once __DIR__ . "/cors.php";
 require_once __DIR__ . "/db.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-if (!$data) {
-    echo json_encode(["success" => false, "message" => "Invalid JSON"]);
+if (
+    !$data ||
+    empty($data["name"]) ||
+    empty($data["email"]) ||
+    empty($data["message"])
+) {
+    echo json_encode([
+        "success" => false,
+        "message" => "Invalid JSON or missing fields"
+    ]);
     exit;
 }
 
-$name    = trim($data['name'] ?? '');
-$email   = trim($data['email'] ?? '');
-$subject = trim($data['subject'] ?? '');
-$message = trim($data['message'] ?? '');
-
-if (!$name || !$email || !$message) {
-    echo json_encode(["success" => false, "message" => "Missing fields"]);
-    exit;
-}
+$name = trim($data["name"]);
+$email = trim($data["email"]);
+$subject = $data["subject"] ?? null;
+$message = trim($data["message"]);
 
 $stmt = $pdo->prepare(
     "INSERT INTO queries (name, email, subject, message)
@@ -25,10 +27,13 @@ $stmt = $pdo->prepare(
 );
 
 $stmt->execute([
-    ":name" => $name,
-    ":email" => $email,
-    ":subject" => $subject,
-    ":message" => $message
+    "name" => $name,
+    "email" => $email,
+    "subject" => $subject,
+    "message" => $message
 ]);
 
-echo json_encode(["success" => true, "message" => "Query submitted"]);
+echo json_encode([
+    "success" => true,
+    "message" => "Query submitted"
+]);
