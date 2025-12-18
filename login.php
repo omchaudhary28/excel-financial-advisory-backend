@@ -3,14 +3,14 @@ require_once __DIR__ . '/cors.php';
 require_once __DIR__ . '/db_connect.php';
 require_once __DIR__ . '/jwt_utils.php';
 
-header('Content-Type: application/json; charset=UTF-8');
+header('Content-Type: application/json');
 
-$data = json_decode(file_get_contents('php://input'), true);
+$input = json_decode(file_get_contents('php://input'), true);
 
-$email    = trim($data['email'] ?? '');
-$password = trim($data['password'] ?? '');
+$email = trim($input['email'] ?? '');
+$password = trim($input['password'] ?? '');
 
-if ($email === '' || $password === '') {
+if (!$email || !$password) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
@@ -20,13 +20,13 @@ if ($email === '' || $password === '') {
 }
 
 try {
-    $stmt = $pdo->prepare(
-        "SELECT id, name, email, password, role
-         FROM users
-         WHERE email = :email
-         LIMIT 1"
-    );
-    $stmt->execute([':email' => $email]);
+    $stmt = $pdo->prepare("
+        SELECT id, name, email, password, role
+        FROM users
+        WHERE email = :email
+        LIMIT 1
+    ");
+    $stmt->execute(['email' => $email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user || !password_verify($password, $user['password'])) {
@@ -38,27 +38,28 @@ try {
         exit;
     }
 
-    // ✅ Generate JWT (NO DB UPDATE)
+    // ✅ Generate JWT (NO DB token column needed)
     $token = generateJWT([
-        'id'    => $user['id'],
-        'email' => $user['email'],
-        'role'  => $user['role']
+        'user_id' => $user['id'],
+        'email'   => $user['email'],
+        'role'    => $user['role']
     ]);
 
     echo json_encode([
         'success' => true,
-        'token'   => $token,
-        'user'    => [
-            'id'    => $user['id'],
-            'name'  => $user['name'],
+        'token' => $token,
+        'user' => [
+            'id' => $user['id'],
+            'name' => $user['name'],
             'email' => $user['email'],
-            'role'  => $user['role']
+            'role' => $user['role']
         ]
     ]);
-} catch (Exception $e) {
+} catch (Throwable $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Server error'
+        'message' => 'Server error',
+        'error' => $e->getMessage()
     ]);
 }
