@@ -9,42 +9,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . "/db.php";
 
+/* ✅ Read JSON body */
 $input = json_decode(file_get_contents("php://input"), true);
 
-$email = trim($input['email'] ?? '');
-$password = $input['password'] ?? '';
+$name             = trim($input['name'] ?? '');
+$email            = trim($input['email'] ?? '');
+$password         = $input['password'] ?? '';
+$confirm_password = $input['confirm_password'] ?? '';
+$phone            = trim($input['phone'] ?? '');
 
-if ($email === '' || $password === '') {
+if ($name === '' || $email === '' || $password === '' || $confirm_password === '') {
     http_response_code(400);
     echo json_encode([
         "success" => false,
-        "message" => "Missing fields"
+        "message" => "Missing required fields"
     ]);
     exit;
 }
 
-$hash = password_hash($password, PASSWORD_BCRYPT);
-
-try {
-    $stmt = $pdo->prepare(
-        "INSERT INTO users (email, password) VALUES (:email, :password)"
-    );
-    $stmt->execute([
-        ":email" => $email,
-        ":password" => $hash
-    ]);
-
+if ($password !== $confirm_password) {
+    http_response_code(400);
     echo json_encode([
-        "success" => true,
-        "message" => "Registration successful"
+        "success" => false,
+        "message" => "Passwords do not match"
     ]);
-} catch (PDOException $e) {
+    exit;
+}
+
+/* ✅ Check if email already exists */
+$stmt = $pdo->prepare("SELECT id FROM users WHERE email = :email");
+$stmt->execute([":email" => $email]);
+
+if ($stmt->fetch()) {
     http_response_code(409);
     echo json_encode([
         "success" => false,
-        "message" => "Email already exists"
+        "message" => "Email already registered"
     ]);
+    exit;
 }
-exit;
+
+/* ✅ Hash password */
+$hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+/* ✅ Insert user */
+$stmt = $pdo->prepare(
+    "INSERT INTO users (name, email, password, phone, role)
+     VALUES (:name, :email, :password, :phone, 'user')"
+);
+
+$stmt->execute([
+    ":name"     => $name,
+    ":email"    => $email,
+    ":password" => $hashedPassword,
+    ":phone"    => $phone
+]);
+
+echo json_encode([
+    "success" => true,
+    "message" => "Registration successful"
+]);
