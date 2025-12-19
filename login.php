@@ -15,21 +15,29 @@ require_once __DIR__ . '/jwt_utils.php';
 $input = json_decode(file_get_contents("php://input"), true);
 
 $email = trim($input['email'] ?? '');
-$password = trim($input['password'] ?? '');
+$password = $input['password'] ?? '';
 
 if ($email === '' || $password === '') {
     http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Missing credentials"]);
+    echo json_encode([
+        "success" => false,
+        "message" => "Missing credentials"
+    ]);
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT id, email, password FROM users WHERE email = :email");
+$stmt = $pdo->prepare(
+    "SELECT id, email, password, name FROM users WHERE email = :email"
+);
 $stmt->execute([":email" => $email]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$user || !password_verify($password, $user['password'])) {
     http_response_code(401);
-    echo json_encode(["success" => false, "message" => "Invalid email or password"]);
+    echo json_encode([
+        "success" => false,
+        "message" => "Invalid email or password"
+    ]);
     exit;
 }
 
@@ -43,6 +51,8 @@ echo json_encode([
     "token" => $token,
     "user" => [
         "id" => $user['id'],
-        "email" => $user['email']
+        "email" => $user['email'],
+        "name" => $user['name']
     ]
 ]);
+exit;

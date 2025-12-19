@@ -1,24 +1,50 @@
-<?php header('Content-Type: application/json'); ?>
-<?php require_once __DIR__.'/cors.php'; ?>
 <?php
-require "db.php";
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: https://excel-financial-advisory.vercel.app");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 
-$data = json_decode(file_get_contents("php://input"), true);
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
-$name = $data['name'] ?? null;
-$email = $data['email'] ?? null;
-$password = $data['password'] ?? null;
+require_once __DIR__ . '/db.php';
 
-if (!$name || !$email || !$password) {
-    echo json_encode(["success" => false, "message" => "Missing fields"]);
+$input = json_decode(file_get_contents("php://input"), true);
+
+$email = trim($input['email'] ?? '');
+$password = $input['password'] ?? '';
+
+if ($email === '' || $password === '') {
+    http_response_code(400);
+    echo json_encode([
+        "success" => false,
+        "message" => "Missing fields"
+    ]);
     exit;
 }
 
 $hash = password_hash($password, PASSWORD_BCRYPT);
 
-$stmt = $pdo->prepare("INSERT INTO users (name,email,password) VALUES (?,?,?)");
-$stmt->execute([$name, $email, $hash]);
+try {
+    $stmt = $pdo->prepare(
+        "INSERT INTO users (email, password) VALUES (:email, :password)"
+    );
+    $stmt->execute([
+        ":email" => $email,
+        ":password" => $hash
+    ]);
 
-echo json_encode(["success" => true, "message" => "Registered successfully"]);
-
-
+    echo json_encode([
+        "success" => true,
+        "message" => "Registration successful"
+    ]);
+} catch (PDOException $e) {
+    http_response_code(409);
+    echo json_encode([
+        "success" => false,
+        "message" => "Email already exists"
+    ]);
+}
+exit;
