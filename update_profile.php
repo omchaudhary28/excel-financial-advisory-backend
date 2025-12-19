@@ -1,33 +1,45 @@
-<?php header('Content-Type: application/json'); ?>
-<?php require_once __DIR__.'/cors.php'; ?>
 <?php
-require "db.php";
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: https://excel-financial-advisory.vercel.app");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 
-$headers = getallheaders();
-$token = str_replace("Bearer ", "", $headers['Authorization'] ?? "");
-
-$stmt = $pdo->prepare("SELECT id FROM users WHERE token=?");
-$stmt->execute([$token]);
-$user = $stmt->fetch();
-
-if (!$user) {
-    http_response_code(401);
-    echo json_encode(["success" => false, "message" => "Unauthorized"]);
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
     exit;
 }
 
-$data = json_decode(file_get_contents("php://input"), true);
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/jwt_utils.php'; // 🔥 THIS WAS MISSING
+
+$userData = verifyJWT();
+$userId = $userData['id'];
+
+$input = json_decode(file_get_contents("php://input"), true);
+
+$name  = trim($input['name'] ?? '');
+$phone = trim($input['phone'] ?? '');
+
+if ($name === '' || $phone === '') {
+    http_response_code(400);
+    echo json_encode([
+        "success" => false,
+        "message" => "Missing fields"
+    ]);
+    exit;
+}
 
 $stmt = $pdo->prepare(
-    "UPDATE users SET name=?, phone=? WHERE id=?"
+    "UPDATE users SET name = :name, phone = :phone WHERE id = :id"
 );
 
 $stmt->execute([
-    $data['name'],
-    $data['phone'],
-    $user['id']
+    ":name"  => $name,
+    ":phone" => $phone,
+    ":id"    => $userId
 ]);
 
-echo json_encode(["success" => true, "message" => "Profile updated"]);
-
-
+echo json_encode([
+    "success" => true,
+    "message" => "Profile updated successfully"
+]);

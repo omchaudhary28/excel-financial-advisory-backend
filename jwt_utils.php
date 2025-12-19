@@ -1,36 +1,47 @@
 <?php
-/**
- * JWT utility functions
- * Uses HS256
- */
+declare(strict_types=1);
 
-function base64UrlEncode($data) {
-    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-}
+require_once __DIR__ . '/vendor/autoload.php';
 
-function generateJWT(array $payload, int $expirySeconds = 86400): string
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+function verifyJWT(): array
 {
-    $secret = getenv('JWT_SECRET') ?: 'CHANGE_THIS_SECRET';
+    $headers = getallheaders();
 
-    $header = [
-        'alg' => 'HS256',
-        'typ' => 'JWT'
-    ];
+    if (!isset($headers['Authorization'])) {
+        http_response_code(401);
+        echo json_encode([
+            "success" => false,
+            "message" => "Authorization header missing"
+        ]);
+        exit;
+    }
 
-    $payload['iat'] = time();
-    $payload['exp'] = time() + $expirySeconds;
+    $authHeader = $headers['Authorization'];
 
-    $base64Header  = base64UrlEncode(json_encode($header));
-    $base64Payload = base64UrlEncode(json_encode($payload));
+    if (!str_starts_with($authHeader, 'Bearer ')) {
+        http_response_code(401);
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid authorization format"
+        ]);
+        exit;
+    }
 
-    $signature = hash_hmac(
-        'sha256',
-        $base64Header . '.' . $base64Payload,
-        $secret,
-        true
-    );
+    $token = trim(str_replace('Bearer', '', $authHeader));
+    $secret = $_ENV['JWT_SECRET'];
 
-    $base64Signature = base64UrlEncode($signature);
-
-    return $base64Header . '.' . $base64Payload . '.' . $base64Signature;
+    try {
+        $decoded = JWT::decode($token, new Key($secret, 'HS256'));
+        return (array) $decoded;
+    } catch (Exception $e) {
+        http_response_code(401);
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid or expired token"
+        ]);
+        exit;
+    }
 }
