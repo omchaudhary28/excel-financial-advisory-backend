@@ -44,7 +44,7 @@ if (!$user || !password_verify($password, $user['password'])) {
 $token = generateJWT([
     "id" => $user['id'],
     "email" => $user['email'],
-    
+    "role" => $user["role"]
 ]);
 
 echo json_encode([
