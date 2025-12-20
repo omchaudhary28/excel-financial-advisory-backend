@@ -1,44 +1,51 @@
-<?php require_once __DIR__.'/cors.php'; ?>
 <?php
-// âœ… CORS (MUST be at the top)
-header("Access-Control-Allow-Origin: https://excel-financial-advisory.vercel.app");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+require_once __DIR__ . '/cors.php';
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/jwt_utils.php';
+
 header("Content-Type: application/json");
 
-// âœ… Handle preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-require "db.php";
+$user = verifyJWT();
+$userId = $user['id'];
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-if (
-    empty($data['name']) ||
-    empty($data['email']) ||
-    empty($data['message'])
-) {
-    echo json_encode(["success" => false, "message" => "Missing fields"]);
+$rating = (int)($data['rating'] ?? 0);
+$message = trim($data['message'] ?? '');
+
+if ($rating < 1 || $rating > 5 || $message === '') {
+    http_response_code(400);
+    echo json_encode([
+        "success" => false,
+        "message" => "Invalid input"
+    ]);
     exit;
 }
 
-$stmt = $pdo->prepare(
-    "INSERT INTO queries (name, email, subject, message)
-     VALUES (:name, :email, :subject, :message)"
-);
+try {
+    $stmt = $pdo->prepare(
+        "INSERT INTO feedback (user_id, rating, message)
+         VALUES (:uid, :rating, :message)"
+    );
 
-$stmt->execute([
-    ":name" => $data['name'],
-    ":email" => $data['email'],
-    ":subject" => $data['subject'] ?? null,
-    ":message" => $data['message']
-]);
+    $stmt->execute([
+        ":uid" => $userId,
+        ":rating" => $rating,
+        ":message" => $message
+    ]);
 
-echo json_encode([
-    "success" => true,
-    "message" => "Query submitted successfully"
-]);
+    echo json_encode(["success" => true]);
 
+} catch (PDOException $e) {
+    // UNIQUE constraint: one feedback per user
+    if ($e->getCode() === "23505") {
+        http_response_code(409);
+        echo json_encode([
+            "success" => false,
+            "message" => "You have already submitted feedback."
+        ]);
+        exit;
+    }
+
+    throw $e;
+}

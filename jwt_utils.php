@@ -5,16 +5,54 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-define('JWT_SECRET', getenv('JWT_SECRET'));
+$JWT_SECRET = getenv('JWT_SECRET');
 
-if (!JWT_SECRET) {
+if (!$JWT_SECRET) {
     throw new Exception("JWT_SECRET not set");
 }
 
+/**
+ * Generate JWT token
+ */
 function generateJWT(array $payload): string
 {
-    $payload['iat'] = time();
-    $payload['exp'] = time() + 86400; // 24 hours
+    global $JWT_SECRET;
 
-    return JWT::encode($payload, JWT_SECRET, 'HS256');
+    $payload['iat'] = time();
+    $payload['exp'] = time() + (60 * 60 * 24); // 24 hours
+
+    return JWT::encode($payload, $JWT_SECRET, 'HS256');
+}
+
+/**
+ * Verify JWT token and return payload
+ */
+function verifyJWT(): array
+{
+    global $JWT_SECRET;
+
+    $headers = getallheaders();
+
+    if (!isset($headers['Authorization'])) {
+        http_response_code(401);
+        echo json_encode([
+            "success" => false,
+            "message" => "Authorization header missing"
+        ]);
+        exit;
+    }
+
+    $token = str_replace("Bearer ", "", $headers['Authorization']);
+
+    try {
+        $decoded = JWT::decode($token, new Key($JWT_SECRET, 'HS256'));
+        return (array) $decoded;
+    } catch (Exception $e) {
+        http_response_code(401);
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid or expired token"
+        ]);
+        exit;
+    }
 }
