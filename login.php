@@ -26,11 +26,11 @@ if ($email === '' || $password === '') {
     exit;
 }
 
-$stmt = $pdo->prepare(
-    "SELECT id, email, password, name, role 
-     FROM users 
-     WHERE email = :email"
-);
+$stmt = $pdo->prepare("
+    SELECT id, email, password, name, role
+    FROM users
+    WHERE email = :email
+");
 $stmt->execute([":email" => $email]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -59,5 +59,3 @@ echo json_encode([
         "role"  => $user['role']
     ]
 ]);
-
-exit;
