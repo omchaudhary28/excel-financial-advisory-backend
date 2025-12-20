@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/cors.php';
 require_once __DIR__ . '/middleware_auth.php';
 require_once __DIR__ . '/db_connect.php';
@@ -12,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// 🔐 Admin-only authentication
+// 🔐 Require ADMIN
 authenticate(true);
 
 $data = json_decode(file_get_contents("php://input"), true);
@@ -27,18 +26,13 @@ if (!$userId) {
     exit;
 }
 
-// Promote user to admin
 $stmt = $pdo->prepare(
     "UPDATE users SET role = 'admin' WHERE id = :id"
 );
-
-$stmt->execute([
-    ':id' => $userId
-]);
+$stmt->execute([':id' => $userId]);
 
 echo json_encode([
     "success" => true,
     "message" => "User promoted to admin"
 ]);
-
 exit;
