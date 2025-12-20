@@ -1,30 +1,14 @@
 <?php
-require_once __DIR__ . '/cors.php';
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/jwt_utils.php';
-
-header("Content-Type: application/json");
+require_once __DIR__.'/db.php';
+require_once __DIR__.'/jwt_utils.php';
 
 $user = verifyJWT();
-
-if ($user['role'] !== 'admin') {
-    http_response_code(403);
-    echo json_encode(["success" => false]);
-    exit;
-}
+if ($user['role'] !== 'admin') exit;
 
 $stmt = $pdo->query("
-  SELECT
-    f.id,
-    f.rating,
-    f.message,
-    f.created_at,
-    u.name,
-    u.email,
-    u.phone
+  SELECT f.*, u.name, u.email, u.phone
   FROM feedback f
-  JOIN users u ON f.user_id = u.id
-  ORDER BY f.created_at DESC
+  JOIN users u ON u.id = f.user_id
 ");
 
 echo json_encode([
