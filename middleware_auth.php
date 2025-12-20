@@ -1,45 +1,51 @@
 <?php
-require_once 'cors.php';
-require_once 'jwt_utils.php';
+
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/jwt_utils.php';
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 header("Content-Type: application/json; charset=UTF-8");
-header('X-Content-Type-Options: nosniff');
 
-// Handle preflight OPTIONS request
+// Handle OPTIONS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
-// ðŸ” Extract Bearer token
-$token = JWT::getBearerToken();
+/**
+ * Authenticate user via JWT
+ * @param bool $adminOnly
+ * @return array decoded token
+ */
+function authenticate(bool $adminOnly = false): array
+{
+    $headers = getallheaders();
 
-if (!$token) {
-    http_response_code(401);
-    echo json_encode([
-        "success" => false,
-        "message" => "Authentication required: JWT token missing."
-    ]);
-    exit;
+    if (!isset($headers['Authorization'])) {
+        http_response_code(401);
+        echo json_encode(["success" => false, "message" => "Authorization header missing"]);
+        exit;
+    }
+
+    $token = str_replace("Bearer ", "", $headers['Authorization']);
+
+    try {
+        $decoded = JWT::decode($token, new Key(JWT_SECRET, 'HS256'));
+        $user = (array) $decoded;
+
+        if ($adminOnly && ($user['role'] ?? '') !== 'admin') {
+            http_response_code(403);
+            echo json_encode(["success" => false, "message" => "Admin access required"]);
+            exit;
+        }
+
+        return $user;
+
+    } catch (Exception $e) {
+        http_response_code(401);
+        echo json_encode(["success" => false, "message" => "Invalid or expired token"]);
+        exit;
+    }
 }
-
-// ðŸ” Verify token
-$payload = JWT::verify($token);
-
-if (!$payload) {
-    http_response_code(401);
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid or expired JWT token."
-    ]);
-    exit;
-}
-
-// âœ… Authenticated user is now available globally
-$GLOBALS['authenticated_user'] = [
-    'id'    => $payload['id'],
-    'email' => $payload['email'],
-    'role'  => $payload['role']
-];
-
-// Continue execution of protected route
