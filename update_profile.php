@@ -15,11 +15,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $user = authenticate(false);
 $userId = $user['id'];
 
-$data = json_decode(file_get_contents("php://input"), true);
+/**
+ * --------------------------------------------------
+ * SAFELY READ INPUT (JSON + FormData)
+ * --------------------------------------------------
+ */
 
-$name  = trim($data['name'] ?? '');
-$phone = trim($data['phone'] ?? '');
+// Try JSON body
+$rawInput = file_get_contents("php://input");
+$data = json_decode($rawInput, true);
 
+// Name (support multiple keys)
+$name = trim(
+    $_POST['name']
+    ?? $_POST['full_name']
+    ?? $data['name']
+    ?? $data['full_name']
+    ?? ''
+);
+
+// Phone (support multiple keys)
+$phone = trim(
+    $_POST['phone']
+    ?? $_POST['mobile']
+    ?? $data['phone']
+    ?? $data['mobile']
+    ?? ''
+);
+
+// ✅ Validation
 if ($name === '') {
     http_response_code(400);
     echo json_encode([
@@ -29,6 +53,11 @@ if ($name === '') {
     exit;
 }
 
+/**
+ * --------------------------------------------------
+ * UPDATE USER
+ * --------------------------------------------------
+ */
 $stmt = $pdo->prepare(
     "UPDATE users
      SET name = :name, phone = :phone
