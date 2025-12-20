@@ -10,35 +10,32 @@ header("Content-Type: application/json; charset=UTF-8");
 $user = authenticate(true);
 
 // -------------------
-// Fetch all users (PDO)
+// Fetch all users
 // -------------------
-$users = [];
 $stmtUsers = $pdo->query(
-    "SELECT id, name, email, phone, created_at 
-     FROM users 
+    "SELECT id, name, email, phone, created_at
+     FROM users
      ORDER BY created_at DESC"
 );
 
 $users = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
 
 // -------------------
-// Fetch all queries (PDO)
+// Fetch all queries (NO q.type)
 // -------------------
-$queries = [];
 $stmtQueries = $pdo->query(
     "
-    SELECT 
+    SELECT
         q.id,
         q.user_id,
-        q.name AS query_name,
-        q.email AS query_email,
+        q.name   AS query_name,
+        q.email  AS query_email,
         q.subject,
         q.message,
-        q.type,
         q.created_at,
-        u.name AS user_name,
-        u.email AS user_email,
-        u.phone AS user_phone
+        u.name   AS user_name,
+        u.email  AS user_email,
+        u.phone  AS user_phone
     FROM queries q
     LEFT JOIN users u ON q.user_id = u.id
     ORDER BY q.created_at DESC
