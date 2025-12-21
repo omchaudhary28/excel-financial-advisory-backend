@@ -1,47 +1,16 @@
 <?php
+require_once __DIR__ . '/jwt_utils.php';
 
-include_once 'jwt_utils.php';
-
-function authenticate($adminOnly = false)
+/**
+ * Authenticate user via JWT
+ * @param bool $adminOnly
+ * @return array
+ */
+function authenticate(bool $adminOnly = false): array
 {
-    header("Content-Type: application/json");
+    $user = verifyJWT(); // 🔑 header-based, no arguments
 
-    $headers = getallheaders();
-
-    if (!isset($headers['Authorization'])) {
-        http_response_code(401);
-        echo json_encode([
-            "success" => false,
-            "message" => "Authorization header missing"
-        ]);
-        exit;
-    }
-
-    $authHeader = $headers['Authorization'];
-    $token = trim(str_replace('Bearer', '', $authHeader));
-
-    if ($token === '') {
-        http_response_code(401);
-        echo json_encode([
-            "success" => false,
-            "message" => "Invalid token"
-        ]);
-        exit;
-    }
-
-    // ✅ CORRECT CALL
-    $user = verifyJWT($token);
-
-    if (!$user) {
-        http_response_code(401);
-        echo json_encode([
-            "success" => false,
-            "message" => "Unauthorized"
-        ]);
-        exit;
-    }
-
-    if ($adminOnly && ($user['role'] ?? 'user') !== 'admin') {
+    if ($adminOnly && ($user['role'] ?? '') !== 'admin') {
         http_response_code(403);
         echo json_encode([
             "success" => false,
