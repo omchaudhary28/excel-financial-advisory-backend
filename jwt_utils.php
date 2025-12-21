@@ -4,6 +4,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
+/* ---------- JWT SECRET ---------- */
 function getJWTSecret(): string {
     $secret = getenv('JWT_SECRET');
     if (!$secret) {
@@ -17,10 +18,19 @@ function getJWTSecret(): string {
     return $secret;
 }
 
-/**
- * Verify JWT from Authorization header
- * Returns decoded payload as array
- */
+/* ---------- GENERATE TOKEN (LOGIN) ---------- */
+function generateJWT(array $payload): string {
+    $payload['iat'] = time();
+    $payload['exp'] = time() + (60 * 60 * 24 * 7); // 7 days
+
+    return JWT::encode(
+        $payload,
+        getJWTSecret(),
+        'HS256'
+    );
+}
+
+/* ---------- VERIFY TOKEN (AUTH) ---------- */
 function verifyJWT(): array {
     $headers = getallheaders();
 
