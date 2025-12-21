@@ -60,3 +60,10 @@ $stmt->execute([
 echo json_encode([
     "success" => true
 ]);
+
+$approved = (bool)($data['approved'] ?? false);
+
+$stmt->execute([
+  ":approved" => $approved,
+  ":id" => $id
+]);

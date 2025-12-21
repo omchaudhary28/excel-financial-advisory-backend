@@ -6,7 +6,7 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Max-Age: 86400");
 header("Content-Type: application/json");
 
-// Handle preflight request
+// Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // ---------- DB ----------
 require_once __DIR__ . '/db.php';
 
-// ---------- QUERY ----------
+// ---------- QUERY (PostgreSQL BOOLEAN FIX) ----------
 $stmt = $pdo->query("
   SELECT 
     u.name,
@@ -25,7 +25,7 @@ $stmt = $pdo->query("
     f.created_at
   FROM feedback f
   JOIN users u ON u.id = f.user_id
-  WHERE f.approved = 1
+  WHERE f.approved = TRUE
   ORDER BY f.created_at DESC
 ");
 
