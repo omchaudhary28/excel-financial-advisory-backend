@@ -2,13 +2,19 @@
 header("Access-Control-Allow-Origin: https://excel-financial-advisory.vercel.app");
 header("Content-Type: application/json");
 
-require_once __DIR__.'/db.php';
+require_once __DIR__ . '/db.php';
 
 $stmt = $pdo->query("
-  SELECT u.name, u.avatar, f.rating, f.message
+  SELECT 
+    u.name,
+    u.avatar,
+    f.rating,
+    f.message,
+    f.created_at
   FROM feedback f
   JOIN users u ON u.id = f.user_id
   WHERE f.approved = true
+  ORDER BY f.created_at DESC
 ");
 
 echo json_encode([

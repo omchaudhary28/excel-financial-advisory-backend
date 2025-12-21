@@ -1,9 +1,23 @@
 <?php
-require_once __DIR__.'/db.php';
-require_once __DIR__.'/jwt_utils.php';
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/jwt_utils.php';
 
-$user = verifyJWT();
-if ($user['role'] !== 'admin') exit;
+header("Content-Type: application/json");
+
+// 🔐 Verify JWT (admin only)
+$headers = getallheaders();
+$authHeader = $headers['Authorization'] ?? '';
+$token = str_replace('Bearer ', '', $authHeader);
+
+$user = verifyJWT($token);
+if (!$user || ($user['role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    echo json_encode([
+        "success" => false,
+        "message" => "Admin access required"
+    ]);
+    exit;
+}
 
 $stmt = $pdo->query("
   SELECT f.*, u.name, u.email, u.phone
