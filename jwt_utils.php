@@ -4,8 +4,15 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-function getJWTSecret() {
+/**
+ * --------------------------------------------------
+ * GET JWT SECRET
+ * --------------------------------------------------
+ */
+function getJWTSecret(): string
+{
     $secret = getenv('JWT_SECRET');
+
     if (!$secret) {
         http_response_code(500);
         echo json_encode([
@@ -14,41 +21,47 @@ function getJWTSecret() {
         ]);
         exit;
     }
+
     return $secret;
 }
 
-/* -------- GENERATE TOKEN (LOGIN) -------- */
-function generateJWT(array $payload): string {
+/**
+ * --------------------------------------------------
+ * GENERATE JWT (LOGIN)
+ * --------------------------------------------------
+ */
+function generateJWT(array $payload): string
+{
     $payload['iat'] = time();
     $payload['exp'] = time() + (60 * 60 * 24 * 7); // 7 days
 
     return JWT::encode($payload, getJWTSecret(), 'HS256');
 }
 
-/* -------- VERIFY TOKEN (AUTH) -------- */
-function verifyJWT(): array {
-    $headers = getallheaders();
-
-    if (!isset($headers['Authorization'])) {
-        http_response_code(401);
-        echo json_encode([
-            "success" => false,
-            "message" => "Authorization header missing"
-        ]);
-        exit;
+/**
+ * --------------------------------------------------
+ * VERIFY JWT (AUTH MIDDLEWARE)
+ * --------------------------------------------------
+ * Accepts token from middleware_auth.php
+ */
+function verifyJWT(string $token): array|false
+{
+    if (trim($token) === '') {
+        return false;
     }
 
-    $token = str_replace("Bearer ", "", $headers['Authorization']);
-
     try {
-        $decoded = JWT::decode($token, new Key(getJWTSecret(), 'HS256'));
-        return (array)$decoded;
+        $decoded = JWT::decode(
+            $token,
+            new Key(getJWTSecret(), 'HS256')
+        );
+
+        return [
+            "id"    => $decoded->id ?? null,
+            "email" => $decoded->email ?? null,
+            "role"  => $decoded->role ?? 'user'
+        ];
     } catch (Exception $e) {
-        http_response_code(401);
-        echo json_encode([
-            "success" => false,
-            "message" => "Invalid or expired token"
-        ]);
-        exit;
+        return false;
     }
 }

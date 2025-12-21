@@ -1,47 +1,54 @@
 <?php
-require_once __DIR__ . '/cors.php';
-require_once __DIR__ . '/jwt_utils.php';
 
-header("Content-Type: application/json; charset=UTF-8");
-header('X-Content-Type-Options: nosniff');
+include_once 'jwt_utils.php';
 
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-/**
- * Authenticate user via JWT
- * @param bool $adminOnly
- * @return array
- */
-function authenticate(bool $adminOnly = false): array
+function authenticate($adminOnly = false)
 {
-    // ✅ verifyJWT() comes from jwt_utils.php
-    $payload = verifyJWT();
+    header("Content-Type: application/json");
 
-    if (!isset($payload['id'], $payload['email'], $payload['role'])) {
+    $headers = getallheaders();
+
+    if (!isset($headers['Authorization'])) {
         http_response_code(401);
         echo json_encode([
             "success" => false,
-            "message" => "Invalid authentication payload"
+            "message" => "Authorization header missing"
         ]);
         exit;
     }
 
-    if ($adminOnly && $payload['role'] !== 'admin') {
+    $authHeader = $headers['Authorization'];
+    $token = trim(str_replace('Bearer', '', $authHeader));
+
+    if ($token === '') {
+        http_response_code(401);
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid token"
+        ]);
+        exit;
+    }
+
+    // ✅ CORRECT CALL
+    $user = verifyJWT($token);
+
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode([
+            "success" => false,
+            "message" => "Unauthorized"
+        ]);
+        exit;
+    }
+
+    if ($adminOnly && ($user['role'] ?? 'user') !== 'admin') {
         http_response_code(403);
         echo json_encode([
             "success" => false,
-            "message" => "Forbidden: Admin access required"
+            "message" => "Admin access required"
         ]);
         exit;
     }
 
-    return [
-        'id'    => $payload['id'],
-        'email' => $payload['email'],
-        'role'  => $payload['role'],
-    ];
+    return $user;
 }
