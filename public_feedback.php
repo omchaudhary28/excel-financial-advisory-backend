@@ -1,8 +1,9 @@
 <?php
-// ---------- CORS (REQUIRED) ----------
+// ---------- CORS ----------
 header("Access-Control-Allow-Origin: https://excel-financial-advisory.vercel.app");
 header("Access-Control-Allow-Methods: GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Max-Age: 86400");
 header("Content-Type: application/json");
 
 // Handle preflight request
