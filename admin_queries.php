@@ -1,56 +1,32 @@
 <?php
-require_once __DIR__ . '/cors.php';
-require_once __DIR__ . '/middleware_auth.php';
-require_once __DIR__ . '/db_connect.php';
-
+header("Access-Control-Allow-Origin: https://excel-financial-advisory.vercel.app");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json");
 
-// Handle preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/jwt_utils.php';
+
+$user = verifyJWT();
+if (($user['role'] ?? '') !== 'admin') {
+    http_response_code(403);
     exit;
 }
 
-// 🔐 Require ADMIN
-authenticate(true);
+$stmt = $pdo->query("
+  SELECT 
+    f.id,
+    f.rating,
+    f.message,
+    f.approved,
+    f.created_at,
+    u.name,
+    u.email
+  FROM feedback f
+  JOIN users u ON u.id = f.user_id
+  ORDER BY f.created_at DESC
+");
 
-// -------------------
-// Fetch users (WITH ROLE)
-// -------------------
-$stmtUsers = $pdo->query(
-    "SELECT id, name, email, phone, role, created_at
-     FROM users
-     ORDER BY created_at DESC"
-);
-$users = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
-
-// -------------------
-// Fetch queries
-// -------------------
-$stmtQueries = $pdo->query(
-    "SELECT 
-        q.id,
-        q.user_id,
-        q.name AS query_name,
-        q.email AS query_email,
-        q.subject,
-        q.message,
-        q.created_at,
-        u.name AS user_name,
-        u.email AS user_email,
-        u.phone AS user_phone
-     FROM queries q
-     LEFT JOIN users u ON q.user_id = u.id
-     ORDER BY q.created_at DESC"
-);
-$queries = $stmtQueries->fetchAll(PDO::FETCH_ASSOC);
-
-// -------------------
-// Response
-// -------------------
 echo json_encode([
-    "success" => true,
-    "users"   => $users,
-    "queries" => $queries
+  "success" => true,
+  "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)
 ]);
-exit;
