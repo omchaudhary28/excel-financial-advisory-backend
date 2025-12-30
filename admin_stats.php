@@ -1,59 +1,41 @@
 <?php
 require_once 'cors.php';
 require_once 'db_connect.php';
-require_once 'middleware_auth.php'; // For admin authentication
+require_once 'middleware_auth.php';
 
-// Authenticate user and check if admin
-$user = authenticate(true); // This will exit if not authenticated or not admin
+// Admin authentication (JWT)
+$user = authenticate(true);
+
+// Default response (frontend-safe)
+$response = [
+    "total_users" => 0,
+    "total_queries" => 0,
+    "total_ratings" => 0
+];
 
 try {
-    // Total Users
-    $stmt = $pdo->prepare("SELECT COUNT(*) AS total_users FROM users");
-    $stmt->execute();
-    $totalUsers = $stmt->fetchColumn();
+    // ---- Users count ----
+    $stmt = $pdo->query("SELECT COUNT(*) FROM users");
+    $response["total_users"] = (int)$stmt->fetchColumn();
 
-    // Total Queries
-    $stmt = $pdo->prepare("SELECT COUNT(*) AS total_queries FROM queries");
-    $stmt->execute();
-    $totalQueries = $stmt->fetchColumn();
+    // ---- Queries count ----
+    $stmt = $pdo->query("SELECT COUNT(*) FROM queries");
+    $response["total_queries"] = (int)$stmt->fetchColumn();
 
-    // New Users This Weekend (Saturday and Sunday)
-    // Get the current date
-    $currentDate = new DateTime();
-    
-    // Determine the start of the current week (Monday)
-    $currentDate->modify('this week'); // This sets it to Monday of the current week
+    // ---- Ratings count ----
+    // (wrapped separately so it never crashes stats)
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) FROM ratings");
+        $response["total_ratings"] = (int)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        $response["total_ratings"] = 0;
+    }
 
-    // Calculate Saturday and Sunday of the current week
-    $saturday = clone $currentDate;
-    $saturday->modify('+5 days'); // Monday + 5 days = Saturday
+    echo json_encode($response);
+    exit;
 
-    $sunday = clone $currentDate;
-    $sunday->modify('+6 days'); // Monday + 6 days = Sunday
-
-    // Format for database query (YYYY-MM-DD HH:MM:SS)
-    $saturdayStart = $saturday->format('Y-m-D 00:00:00');
-    $sundayEnd = $sunday->format('Y-m-D 23:59:59');
-
-    $stmt = $pdo->prepare("SELECT COUNT(*) AS new_users_weekend FROM users WHERE created_at >= ? AND created_at <= ?");
-    $stmt->execute([$saturdayStart, $sundayEnd]);
-    $newUsersWeekend = $stmt->fetchColumn();
-
-    echo json_encode([
-        "success" => true,
-        "data" => [
-            "total_users" => $totalUsers,
-            "total_queries" => $totalQueries,
-            "new_users_weekend" => $newUsersWeekend,
-            // "website_reach" is assumed to be total users for now
-            "website_reach" => $totalUsers 
-        ]
-    ]);
-
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Server error: " . $e->getMessage()]);
+    // NEVER break frontend
+    http_response_code(200);
+    echo json_encode($response);
 }
