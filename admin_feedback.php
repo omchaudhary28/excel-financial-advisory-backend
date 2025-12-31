@@ -1,16 +1,9 @@
 <?php
-header("Access-Control-Allow-Origin: https://excel-financial-advisory.vercel.app");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Content-Type: application/json");
+require_once 'cors.php';
+require_once 'db_connect.php';
+require_once 'middleware_auth.php';
 
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/jwt_utils.php';
-
-$user = verifyJWT();
-if (($user['role'] ?? '') !== 'admin') {
-    http_response_code(403);
-    exit;
-}
+authenticate(true);
 
 $stmt = $pdo->query("
   SELECT 
